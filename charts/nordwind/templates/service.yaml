@@ -1,0 +1,32 @@
+{{- $ProjectChart := include "project.chart" . -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "project.fullname" . }}
+  namespace: {{ include "project.name" . }}
+  labels:
+{{ include "project.labels" . | indent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+  selector:
+{{ include "project.labels" . | indent 4 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: consumer-{{ .Values.project.env }}
+  namespace: {{ include "project.name" . }}
+  labels:
+{{ include "project.labels" . | indent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 9001
+      protocol: TCP
+  selector:
+{{ include "project.labels" . | indent 4 }}

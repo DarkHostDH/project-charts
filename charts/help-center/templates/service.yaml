@@ -1,0 +1,40 @@
+{{- $ProjectChart := include "project.chart" . -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "project.fullname" . }}
+  namespace: {{ include "project.name" . }}
+  labels:
+{{ include "project.labels" . | indent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+  selector:
+{{ include "project.labels" . | indent 4 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: consumer-{{ .Values.projectEnv }}
+  namespace: {{ include "project.name" . }}
+  labels:
+    helm.sh/chart: help-center-0.1.1
+    app.kubernetes.io/name: consumer
+    app.kubernetes.io/instance: staging
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 9001
+      protocol: TCP
+  selector:
+    helm.sh/chart: help-center-0.1.1
+    app.kubernetes.io/name: consumer
+    app.kubernetes.io/instance: staging
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm

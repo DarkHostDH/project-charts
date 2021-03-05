@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer-{{ .Values.projectEnv }}
+  namespace: {{ include "project.name" . }}
+  labels:
+    helm.sh/chart: help-center-0.1.1
+    app.kubernetes.io/name: consumer
+    app.kubernetes.io/instance: staging
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      helm.sh/chart: help-center-0.1.1
+      app.kubernetes.io/name: consumer
+      app.kubernetes.io/instance: staging
+      app.kubernetes.io/version: "1.16.0"
+      app.kubernetes.io/managed-by: Helm
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: help-center-0.1.1
+        app.kubernetes.io/name: consumer
+        app.kubernetes.io/instance: staging
+        app.kubernetes.io/version: "1.16.0"
+        app.kubernetes.io/managed-by: Helm
+      annotations:
+        timestamp: "{{ now | unixEpoch }}"
+    spec:
+      imagePullSecrets:
+      {{- range .Values.imagePullSecrets }}
+        - name: {{ . }}
+      {{- end }}
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+    {{- end -}}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end -}}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      containers:
+        - name: consumer-{{ .Values.projectEnv }}
+          image: {{ .Values.app.image }}
+          imagePullPolicy: {{ .Values.app.imagePullPolicy}}
+          lifecycle:
+            postStart:
+              exec:
+                command: [ "/bin/sh", "-c", "sleep 5; /usr/bin/supervisorctl start all" ]
+          resources:
+            limits:
+              cpu: 1
+              memory: "1Gi"
+            requests:
+              cpu: 1
+              memory: "256Mi"
+          ports:
+            - containerPort: 9001

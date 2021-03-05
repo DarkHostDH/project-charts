@@ -1,0 +1,88 @@
+project:
+  env: staging
+  tag: "staging"
+
+service:
+  type: ClusterIP
+  port: 80
+
+replicaCount: 1
+
+autoscaling:
+  enabled: false
+
+nodeSelector:
+  node-role.kubernetes.io/worker: worker
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+     maxSurge: 25%
+     maxUnavailable: 25%
+
+database:
+  migration:
+    enabled: false
+
+app:
+  image: dregistry.pega.st:4567/pegas-web/nordwind/app
+  imagePullPolicy: Always
+  resources:
+    limits:
+      cpu: 2
+      memory: "2Gi"
+    requests:
+      cpu: 1
+      memory: "512Mi"
+
+web:
+  image: dregistry.pega.st:4567/pegas-web/nordwind/web
+  imagePullPolicy: Always
+  resources:
+    limits:
+      cpu: 1
+      memory: "512Mi"
+    requests:
+      cpu: 0.5
+      memory: "256Mi"
+
+imagePullSecrets: ["dregistry-secret"]
+
+ingress:
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 32m
+    nginx.ingress.kubernetes.io/client-body-buffer-size: 16m
+    nginx.ingress.kubernetes.io/client-body-size: 32m
+  hosts:
+    - host: staging.nordwindairlines.ru
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: nordwind
+              port:
+                number: 80
+    - host: supervisor.staging.nordwindairlines.ru
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: consumer
+              port:
+                number: 9001
+
+cronjobs:
+  - name: sonata-cleanup-snapshots
+    enabled: true
+    schedule: "15 1 * * *"
+    command: '["/usr/bin/php", "/var/www/app/console", "sonata:page:cleanup-snapshots", "--site=all"]'
+    nodeSelector:
+      node-role.kubernetes.io/worker: worker
+  - name: parse-price
+    enabled: true
+    schedule: "*/1 * * * *"
+    command: '["/usr/bin/php", "/var/www/app/console", "app:parse-price:process-queue", "--env=prod"]'
+    nodeSelector:
+      node-role.kubernetes.io/worker: worker
